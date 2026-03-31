@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: postgres
+    environment:
+      POSTGRES_DB: notes_library
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 0191
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/18/main
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9090"
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio-init
+    depends_on:
+      - minio
+    entrypoint: ["/bin/sh", "/init/create_bucket.sh"]
+    volumes:
+      - ./create_bucket.sh:/init/create_bucket.sh
+
+  api:
+    image: ubuntu:24.04
+    container_name: api
+    depends_on:
+      - postgres
+      - minio
+      - minio-init
+    working_dir: /app
+    volumes:
+      - ./api:/app/api
+      - ./dist:/app/dist
+      - ./.env:/app/.env
+    env_file:
+      - .env
+    command: ["./api"]
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
+  minio_data:
