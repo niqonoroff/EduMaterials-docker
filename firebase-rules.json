@@ -1,0 +1,22 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "wall": {
+      ".read": true,
+      ".write": true,
+      "state": {
+        ".validate": "newData.isString() && newData.val().length < 8000000"
+      },
+      "updatedAt": {
+        ".validate": "newData.isNumber()"
+      },
+      "updatedBy": {
+        ".validate": "newData.isString() && newData.val().length < 100"
+      },
+      "$other": {
+        ".validate": false
+      }
+    }
+  }
+}
