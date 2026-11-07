@@ -97,7 +97,7 @@
 
 :root[data-theme="light"] {
   --bg: #f7f1e6;
-  --surface: #efe7d7;
+  --surface: #000000;
   --surface-2: #e6dcc9;
   --ink: #211c13;
   --danger: #b4322b;
