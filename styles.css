@@ -79,7 +79,7 @@
 
 :root {
   --bg: #1c1c1c;
-  --surface: #3b3b3b;
+  --surface: #000000;
   --surface-2: #414141;
   --ink: #f8f8ff;
   --field-border: #5e5e5e;
@@ -97,8 +97,8 @@
 
 :root[data-theme="light"] {
   --bg: #f7f1e6;
-  --surface: #000000;
-  --surface-2: #e6dcc9;
+  --surface: #d8bfd8;
+  --surface-2: #ffffff;
   --ink: #211c13;
   --danger: #b4322b;
   --sig-mark: #e73c7e;

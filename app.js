@@ -656,7 +656,7 @@ function isLowSurrogate(code) {
  * broken mark keeps its color because the pattern runs to the end of line.
  */
 const SIGNATURE_PATTERN = /\[Signed by[^\n]*/g;
-const SIGNATURE_PROMPT = "Enter your name:";
+const SIGNATURE_PROMPT = "Enter your name";
 
 function escapeHtml(value) {
   return value.replace(/[&<>"']/g, (char) => {
