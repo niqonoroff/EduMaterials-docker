@@ -1,10 +1,3 @@
-/*
- * Fonts are bundled with the project (no online requests), so the page
- * keeps working even if external CDNs become unreachable.
- * Ubuntu: regular + bold, latin and cyrillic subsets.
- * Abhaya Libre ExtraBold is kept as the display font for titles.
- * Both are distributed under their own licences (see fonts/ folder).
- */
 @font-face {
   font-family: "Ubuntu";
   font-style: normal;
@@ -180,9 +173,9 @@ body {
 .login-title {
   margin: 0;
   color: var(--ink);
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 20px;
   letter-spacing: 0.005em;
   text-align: center;
@@ -419,11 +412,6 @@ body {
   outline-offset: 2px;
 }
 
-/*
- * The theme and scroll buttons match the heart: transparent in both themes,
- * the icon stroke follows the text color.
- */
-
 .icon-button:disabled {
   opacity: 0.35;
   cursor: default;
@@ -539,5 +527,65 @@ body {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
+  }
+}
+
+/* ---------- Signature modal ---------- */
+
+.signature-screen {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+  animation: fade-in 180ms ease;
+}
+
+:root[data-theme="light"] .signature-screen {
+  background: rgba(64, 52, 28, 0.28);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.signature-card {
+  animation: card-pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes card-pop {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.signature-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.signature-buttons .login-button {
+  flex: 1;
+}
+
+.signature-ok {
+  background: var(--sig-mark) !important;
+  color: #ffffff !important;
+  border-color: var(--sig-mark) !important;
+}
+
+.signature-ok:hover,
+.signature-ok:focus-visible {
+  filter: brightness(0.92);
+}
+
+.signature-ok:active {
+  filter: brightness(0.84);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signature-screen,
+  .signature-card {
+    animation: none !important;
   }
 }
