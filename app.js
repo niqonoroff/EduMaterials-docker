@@ -17,6 +17,7 @@ const AUTH_KEY = "wall-unlocked";
 const DB_PATH = "wall";
 const SAVE_DELAY = 450;
 const SAVE_TIMEOUT = 12000;
+const TEST_MODE = new URLSearchParams(window.location.search).has("nofirebase");
 
 /*
  * The Firebase web config is public by design. Realtime Database only
@@ -45,6 +46,8 @@ const wallScreen = document.querySelector("#wall-screen");
 const wallText = document.querySelector("#wall-text");
 const saveButton = document.querySelector("#save-button");
 const statusEl = document.querySelector("#status");
+const themeButton = document.querySelector("#theme-button");
+const scrollBottomButton = document.querySelector("#scroll-bottom-button");
 
 /* ------------------------------------------------------------------ */
 /*  Shared document                                                   */
@@ -114,6 +117,53 @@ function clearLoginError() {
   loginError.textContent = "";
 }
 
+/* ------------------------------------------------------------------ */
+/*  Theme                                                             */
+/* ------------------------------------------------------------------ */
+
+const THEME_KEY = "wall-theme";
+const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute(
+      "content",
+      theme === "light" ? "#f7f1e6" : "#333333"
+    );
+  }
+}
+
+function storedTheme() {
+  try {
+    return window.localStorage.getItem(THEME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberTheme(theme) {
+  try {
+    window.localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    /* Storage can be unavailable; the theme still works for this visit. */
+  }
+}
+
+themeButton.addEventListener("click", () => {
+  const next =
+    document.documentElement.dataset.theme === "light" ? "dark" : "light";
+
+  applyTheme(next);
+  rememberTheme(next);
+});
+
+/* Keep the meta tag in sync if the theme was restored from storage. */
+if (document.documentElement.dataset.theme === "light") {
+  applyTheme("light");
+}
+
 function openWall({ animate = true, focus = false } = {}) {
   if (!unlocked) {
     unlocked = true;
@@ -148,8 +198,7 @@ function focusWall() {
   }
   focusWhenReady = false;
   wallText.focus({ preventScroll: true });
-  const end = wallText.value.length;
-  wallText.setSelectionRange(end, end);
+  editorSetCaret(ytext.length);
 }
 
 function rememberUnlock() {
@@ -175,6 +224,12 @@ function wasUnlocked() {
 function connect() {
   if (connectionStarted) return;
   connectionStarted = true;
+
+  /* Local test mode: /index.html?nofirebase skips the network entirely. */
+  if (TEST_MODE) {
+    markReady();
+    return;
+  }
 
   if (!database) {
     markReady();
@@ -222,12 +277,13 @@ function connect() {
 
 function markReady() {
   ready = true;
-  wallText.value = ytext.toString();
-  wallText.disabled = false;
+  wallText.contentEditable = "true";
+  renderSharedText();
   saveButton.disabled = false;
   lastSavedText = ytext.toString();
   dirty = false;
   setStatus(connected ? "" : "Offline — retrying…");
+  scrollToBottom();
 
   if (focusWhenReady) focusWall();
 }
@@ -241,7 +297,7 @@ function applyRemoteState(encoded) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Textarea <-> Yjs                                                  */
+/*  Editor (contenteditable) <-> Yjs                                  */
 /* ------------------------------------------------------------------ */
 
 ytext.observe(() => {
@@ -251,7 +307,7 @@ ytext.observe(() => {
 wallText.addEventListener("input", () => {
   if (!ready) return;
 
-  const next = wallText.value;
+  const next = serializeWall();
   const previous = ytext.toString();
   if (next === previous) return;
 
@@ -265,26 +321,123 @@ wallText.addEventListener("input", () => {
   scheduleSave();
 });
 
+/*
+ * Keep the editor DOM strictly flat (text nodes + signature spans).
+ * Enter and paste are intercepted so no stray <div>/<br>/<font> wrappers
+ * appear; every change flows through the shared document instead.
+ */
+/*
+ * Enter and paste are applied surgically: the text goes straight into the
+ * editor DOM at the caret, without a whole-DOM rewrite. Chrome tracks the
+ * typing caret itself and does not follow a programmatic selection after
+ * a DOM rewrite — the next real keystroke would land back at the
+ * pre-edit position (text "joining" into one line). Instead Enter is
+ * cancelled at the keydown stage (before Chrome starts editing at all,
+ * like ProseMirror does) and paste is cancelled on the paste event;
+ * neither leaves a pending editing transaction behind, so Chrome keeps
+ * honoring the caret we set. Yjs is still updated; because the DOM then
+ * already matches the shared text, the observer's renderSharedText()
+ * takes the early "no change" path and never rewrites the DOM.
+ */
+wallText.addEventListener("keydown", (event) => {
+  if (!ready || event.key !== "Enter") return;
+
+  /*
+   * Cancel Chrome's own paragraph editing and run a NATIVE line-break
+   * transaction instead: inside our white-space:pre-wrap editor it
+   * inserts a literal "\n" text character and moves Chrome's internal
+   * caret, so every following keystroke keeps typing at the right spot.
+   * (Manual DOM rewrites after a cancelled edit make Chrome type from a
+   * stale position, so the DOM is deliberately left alone here.)
+   */
+  event.preventDefault();
+  document.execCommand("insertLineBreak");
+});
+
+wallText.addEventListener("paste", (event) => {
+  if (!ready) {
+    event.preventDefault();
+    return;
+  }
+  event.preventDefault();
+  const transfer = event.clipboardData;
+  let pasted = transfer ? transfer.getData("text/plain") : "";
+  pasted = pasted.replace(/\r\n?/g, "\n");
+  if (pasted) editorApplyEdit(pasted);
+});
+function editorApplyEdit(inserted) {
+  const selection = editorSelectionOffsets();
+  const from = selection ? Math.min(selection.anchor, selection.focus) : ytext.length;
+  const to = selection ? Math.max(selection.anchor, selection.focus) : ytext.length;
+
+  if (from === to && inserted) {
+    editorInsertDom(from, inserted);
+  }
+
+  ydoc.transact(() => {
+    if (to > from) ytext.delete(from, to - from);
+    if (inserted) ytext.insert(from, inserted);
+  }, "local");
+
+  dirty = true;
+  scheduleSave();
+  editorSetSelection(from + inserted.length, from + inserted.length);
+}
+
+/*
+ * Insert `text` at the flat caret offset without touching the rest of the
+ * DOM. The fragment is built from markupText(), so a pasted signature is
+ * styled immediately, and exactly matches what renderSharedText would
+ * produce — which is why the observer path stays a no-op.
+ */
+function editorInsertDom(offset, text) {
+  const fragment = document.createDocumentFragment();
+  const template = document.createElement("template");
+  template.innerHTML = markupText(text);
+  while (template.content.firstChild) {
+    fragment.appendChild(template.content.firstChild);
+  }
+
+  const [node, localOffset] = editorPosition(offset);
+
+  if (node === wallText && localOffset === 0 && !wallText.firstChild) {
+    wallText.appendChild(fragment);
+    return;
+  }
+
+  if (node.nodeType === Node.TEXT_NODE) {
+    let split;
+    if (localOffset === 0) {
+      node.parentNode.insertBefore(fragment, node);
+      return;
+    }
+    split = node.splitText(localOffset);
+    node.parentNode.insertBefore(fragment, split);
+    return;
+  }
+
+  /* Defensive fallback: append at the end of the editing host. */
+  wallText.appendChild(fragment);
+}
+
 wallText.addEventListener("blur", () => {
   if (ready && dirty) saveNow();
 });
 
 function renderSharedText() {
   const next = ytext.toString();
-  const previous = wallText.value;
+  const previous = serializeWall();
   if (next === previous) return;
 
   const change = computeDiff(previous, next);
-  const selectionStart = wallText.selectionStart;
-  const selectionEnd = wallText.selectionEnd;
-  const wasFocused = document.activeElement === wallText;
+  const selection = editorSelectionOffsets();
   const oldScrollTop = wallText.scrollTop;
   const wasAtBottom =
     wallText.scrollTop + wallText.clientHeight >= wallText.scrollHeight - 4;
 
-  wallText.value = next;
+  wallText.innerHTML = markupText(next);
 
-  if (wasFocused) {
+  if (selection) {
     const mapPosition = (position) => {
       if (position <= change.start) return position;
       if (position >= change.start + change.removed) {
@@ -292,9 +445,9 @@ function renderSharedText() {
       }
       return change.start + change.inserted.length;
     };
-    wallText.setSelectionRange(
-      mapPosition(selectionStart),
-      mapPosition(selectionEnd)
+    editorSetSelection(
+      mapPosition(selection.anchor),
+      mapPosition(selection.focus)
     );
   }
 
@@ -303,6 +456,141 @@ function renderSharedText() {
   } else {
     wallText.scrollTop = oldScrollTop;
   }
+}
+
+function serializeWall() {
+  /*
+   * The editor is kept flat (only text nodes and signature spans), so the
+   * text is simply every text node concatenated. Child <br> or <div>
+   * (if a rogue browser ever created one) count as a newline defensively.
+   */
+  let text = "";
+  const walker = document.createTreeWalker(
+    wallText,
+    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+    null
+  );
+
+  let node;
+  while ((node = walker.nextNode())) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      text += node.data;
+    } else if (node.nodeName === "BR") {
+      if (text && !text.endsWith("\n")) text += "\n";
+    } else if (node.nodeName === "DIV" || node.nodeName === "P") {
+      if (text && !text.endsWith("\n")) text += "\n";
+    }
+  }
+
+  return text;
+}
+
+/* Build editor HTML: plain text with "[Signed by …]" parts wrapped in
+   colored half-size spans. Newlines stay as real "\n" characters — the
+   editor uses white-space: pre-wrap. */
+function markupText(text) {
+  let html = "";
+  let cursor = 0;
+
+  SIGNATURE_PATTERN.lastIndex = 0;
+  let match;
+  while ((match = SIGNATURE_PATTERN.exec(text)) !== null) {
+    html += escapeHtml(text.slice(cursor, match.index));
+    html += `<span class="signature-mark">${escapeHtml(match[0])}</span>`;
+    cursor = match.index + match[0].length;
+  }
+  html += escapeHtml(text.slice(cursor));
+
+  return html;
+}
+
+function editorSelectionOffsets() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+
+  const range = selection.getRangeAt(0);
+  if (
+    !wallText.contains(range.startContainer) ||
+    !wallText.contains(range.endContainer)
+  ) {
+    return null;
+  }
+
+  return {
+    anchor: editorRangeOffset(range.startContainer, range.startOffset),
+    focus: editorRangeOffset(range.endContainer, range.endOffset),
+  };
+}
+
+function editorRangeOffset(node, offset) {
+  const probe = document.createRange();
+  probe.setStart(wallText, 0);
+  try {
+    probe.setEnd(node, offset);
+  } catch {
+    return fallbackOffset(node);
+  }
+  return probe.toString().length;
+}
+
+function fallbackOffset(node) {
+  /* Last resort: count characters until this node is fully consumed. */
+  let count = 0;
+  const walker = document.createTreeWalker(wallText, NodeFilter.SHOW_TEXT, null);
+  let current;
+  while ((current = walker.nextNode())) {
+    if (current === node && node.data) return count;
+    count += current.data.length;
+  }
+  return count;
+}
+
+function editorTextNodes() {
+  const nodes = [];
+  const walker = document.createTreeWalker(wallText, NodeFilter.SHOW_TEXT, null);
+  let node;
+  while ((node = walker.nextNode())) nodes.push(node);
+  return nodes;
+}
+
+function editorSetSelection(anchor, focus) {
+  const selection = window.getSelection();
+  if (!selection) return;
+
+  selection.removeAllRanges();
+  const range = document.createRange();
+
+  if (anchor !== focus) {
+    const start = Math.min(anchor, focus);
+    const end = Math.max(anchor, focus);
+    range.setStart(...editorPosition(start));
+    range.setEnd(...editorPosition(end));
+  } else {
+    range.collapse(false);
+    range.setStart(...editorPosition(anchor));
+    range.collapse(true);
+  }
+
+  selection.addRange(range);
+}
+
+function editorPosition(offset) {
+  const nodes = editorTextNodes();
+  if (nodes.length === 0) return [wallText, 0];
+
+  let remaining = offset;
+  let last = nodes[nodes.length - 1];
+
+  for (const node of nodes) {
+    if (remaining <= node.data.length) return [node, remaining];
+    remaining -= node.data.length;
+  }
+
+  return [last, last.data.length];
+}
+
+function editorSetCaret(offset) {
+  editorSetSelection(offset, offset);
 }
 
 function computeDiff(before, after) {
@@ -359,6 +647,93 @@ function isLowSurrogate(code) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Signatures                                                        */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Signature "[Signed by …]" parts are wrapped into colored half-size spans
+ * right inside the editor markup. See markupText() — an edited or even
+ * broken mark keeps its color because the pattern runs to the end of line.
+ */
+const SIGNATURE_PATTERN = /\[Signed by[^\n]*/g;
+const SIGNATURE_PROMPT = "Enter your name:";
+
+function escapeHtml(value) {
+  return value.replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      default: return "&#39;";
+    }
+  });
+}
+
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+
+function formatStamp(date) {
+  return `${pad2(date.getDate())}.${pad2(date.getMonth() + 1)}.${date.getFullYear()} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+
+function askSignatureName() {
+  let answer = "";
+  try {
+    answer = window.prompt(SIGNATURE_PROMPT) || "";
+  } catch {
+    answer = "";
+  }
+  return answer.trim() || "Anonymous";
+}
+
+function addSignature(name) {
+  const current = ytext.toString();
+  const prefix = !current || current.endsWith("\n") ? "" : "\n";
+
+  /*
+   * A zero-width space after the final newline is deliberate: in
+   * contenteditable Chrome cannot anchor the caret after a bare trailing
+   * newline and silently moves it back to the end of the previous node —
+   * the next keystroke would then be typed INTO the signature span
+   * (small and pink). The zero-width char is a real anchor for the caret
+   * (renders as an empty line with the caret at its very start), is
+   * invisible and takes no width — unlike a plain space it adds no
+   * visual indent to the new line.
+   */
+  const mark = `${prefix}[Signed by ${name}; ${formatStamp(new Date())}]\n\u200B`;
+
+  ydoc.transact(() => {
+    ytext.insert(ytext.length, mark);
+  }, "local");
+
+  dirty = true;
+  scheduleSave();
+
+  editorSetCaret(ytext.length);
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const go = () => {
+    wallText.scrollTop = wallText.scrollHeight;
+  };
+
+  go();
+  /* Re-run once the layout settles (e.g. after the web font loads). */
+  window.requestAnimationFrame(go);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(go).catch(go);
+  }
+  window.setTimeout(go, 300);
+}
+
+scrollBottomButton.addEventListener("click", () => {
+  scrollToBottom();
+});
+
+/* ------------------------------------------------------------------ */
 /*  Saving                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -385,6 +760,14 @@ function scheduleSave(delay = SAVE_DELAY) {
 
 async function saveNow(showStatus = true) {
   if (!ready) return false;
+
+  /* Never touch the shared wall while testing locally. */
+  if (TEST_MODE) {
+    lastSavedText = ytext.toString();
+    dirty = false;
+    setStatus("Test mode — not saving", 1600);
+    return true;
+  }
 
   if (saving) {
     saveAgain = true;
@@ -471,6 +854,9 @@ saveButton.addEventListener("click", () => {
   saveButton.classList.remove("pop");
   void saveButton.offsetWidth;
   saveButton.classList.add("pop");
+
+  const signedBy = askSignatureName();
+  addSignature(signedBy);
 
   const startedAt = Date.now();
   saveNow(false).then(

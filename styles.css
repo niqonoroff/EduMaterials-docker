@@ -1,13 +1,112 @@
+/*
+ * Fonts are bundled with the project (no online requests), so the page
+ * keeps working even if external CDNs become unreachable.
+ * Ubuntu: regular + bold, latin and cyrillic subsets.
+ * Abhaya Libre ExtraBold is kept as the display font for titles.
+ * Both are distributed under their own licences (see fonts/ folder).
+ */
+@font-face {
+  font-family: "Ubuntu";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/ubuntu-latin-400.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/ubuntu-latin-700.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/ubuntu-latin-ext-400.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/ubuntu-latin-ext-700.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/ubuntu-cyrillic-400.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Ubuntu";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/ubuntu-cyrillic-700.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Abhaya Libre";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("./fonts/abhaya-libre-latin-800.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Abhaya Libre";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("./fonts/abhaya-libre-latin-ext-800.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
-  --bg: #000000;
-  --surface: #121212;
-  --surface-2: #212121;
+  --bg: #1c1c1c;
+  --surface: #3b3b3b;
+  --surface-2: #414141;
   --ink: #f8f8ff;
-  --field-border: #535353;
-  --signature: #282828;
+  --field-border: #5e5e5e;
+  --signature: #454545;
   --danger: #ff7a7a;
-  --font-ui: "ABeeZee", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sig-mark: #ef7fb2;
+  --placeholder: rgba(248, 248, 255, 0.28);
+  --selection: rgba(248, 248, 255, 0.2);
+  --scroll-thumb: #565656;
+  --scroll-thumb-hover: #6a6a6a;
+  --card-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+  --font-ui: "Ubuntu", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-display: "Abhaya Libre", Georgia, "Times New Roman", serif;
+}
+
+:root[data-theme="light"] {
+  --bg: #f7f1e6;
+  --surface: #efe7d7;
+  --surface-2: #e6dcc9;
+  --ink: #211c13;
+  --danger: #b4322b;
+  --sig-mark: #e73c7e;
+  --placeholder: rgba(33, 28, 19, 0.3);
+  --selection: rgba(33, 28, 19, 0.16);
+  --scroll-thumb: #d9cdb8;
+  --scroll-thumb-hover: #c7b99f;
+  --card-shadow: 0 18px 60px rgba(64, 52, 28, 0.18);
 }
 
 * {
@@ -71,7 +170,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--ink);
   border-radius: 20px;
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--card-shadow);
 }
 
 .login-card.is-shaking {
@@ -216,21 +315,44 @@ body {
   background: transparent;
   border: 0;
   outline: 0;
-  resize: none;
+  caret-color: var(--ink);
+  cursor: text;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   white-space: pre-wrap;
   overflow-wrap: break-word;
   word-break: normal;
-  caret-color: var(--ink);
-  -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: #2b2b2b transparent;
+  scrollbar-color: var(--scroll-thumb) transparent;
 }
 
-.wall-text::placeholder {
-  color: rgba(248, 248, 255, 0.28);
+.wall-text:empty::before {
+  content: attr(data-placeholder);
+  color: var(--placeholder);
+  pointer-events: none;
+}
+
+.wall-text:active,
+.wall-text:focus {
+  cursor: text;
+}
+
+.wall-text[contenteditable="false"] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.wall-text::selection {
+  background-color: var(--selection);
+}
+
+.signature-mark {
+  font-size: 0.5em;
+  line-height: 1;
+  vertical-align: 0.35em;
+  color: var(--sig-mark);
 }
 
 .wall-text:disabled {
@@ -247,24 +369,32 @@ body {
 }
 
 .wall-text::-webkit-scrollbar-thumb {
-  background: #2a2a2a;
+  background: var(--scroll-thumb);
   background-clip: padding-box;
-  border: 2px solid #000;
+  border: 2px solid var(--bg);
   border-radius: 999px;
 }
 
 .wall-text::-webkit-scrollbar-thumb:hover {
-  background: #3a3a3a;
+  background: var(--scroll-thumb-hover);
   background-clip: padding-box;
 }
 
-.heart-button {
+.wall-actions {
   position: fixed;
-  right: calc(16px + env(safe-area-inset-right, 0px));
-  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  right: calc(24px + env(safe-area-inset-right, 0px));
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-button,
+.heart-button {
   display: grid;
-  place-items: end;
+  place-items: center;
   width: 44px;
   height: 44px;
   padding: 0;
@@ -278,13 +408,36 @@ body {
   transition: transform 150ms ease, opacity 180ms ease;
 }
 
+.icon-button:active,
 .heart-button:active {
   transform: scale(0.92);
 }
 
+.icon-button:focus-visible,
 .heart-button:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
+}
+
+/*
+ * The theme and scroll buttons match the heart: transparent in both themes,
+ * the icon stroke follows the text color.
+ */
+
+.icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.icon-button svg {
+  display: block;
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .heart-button:disabled {
@@ -362,9 +515,9 @@ body {
     font-size: 24px;
   }
 
-  .heart-button {
-    right: calc(16px + env(safe-area-inset-right, 0px));
-    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  .wall-actions {
+    right: calc(20px + env(safe-area-inset-right, 0px));
+    bottom: calc(22px + env(safe-area-inset-bottom, 0px));
   }
 
   .status {

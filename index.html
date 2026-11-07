@@ -3,18 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#333333">
   <meta name="color-scheme" content="dark">
   <meta name="description" content="A shared notebook for the family.">
   <title>Wall</title>
 
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=ABeeZee:ital@0;1&family=Abhaya+Libre:wght@800&display=swap" rel="stylesheet">
+  <!-- Fonts are bundled locally in ./fonts, no CDN dependency. -->
 
   <link rel="stylesheet" href="./styles.css">
+
+  <script>
+    /* Apply the saved theme before the first paint to avoid a flash. */
+    try {
+      if (window.localStorage.getItem("wall-theme") === "light") {
+        document.documentElement.dataset.theme = "light";
+      }
+    } catch (error) {
+      /* Theme falls back to dark. */
+    }
+  </script>
 </head>
 <body>
   <main>
@@ -39,25 +48,42 @@
     </section>
 
     <section id="wall-screen" class="screen wall-screen" aria-label="Wall" hidden>
-      <textarea
+      <div
         id="wall-text"
         class="wall-text"
-        placeholder="Text"
+        contenteditable="false"
+        data-placeholder="Text"
+        role="textbox"
+        aria-multiline="true"
         aria-label="Shared notebook"
-        autocomplete="off"
+        spellcheck="false"
         autocapitalize="sentences"
         autocorrect="off"
-        spellcheck="false"
-        disabled
-      ></textarea>
+        translate="no"
+      ></div>
 
       <div id="status" class="status" role="status" aria-live="polite"></div>
 
-      <button id="save-button" class="heart-button" type="button" aria-label="Save" title="Save" disabled>
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-        </svg>
-      </button>
+      <div id="wall-actions" class="wall-actions">
+        <button id="scroll-bottom-button" class="icon-button" type="button" aria-label="Scroll to the latest messages" title="Scroll to bottom">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <polyline points="19 12 12 19 5 12"/>
+          </svg>
+        </button>
+
+        <button id="theme-button" class="icon-button" type="button" aria-label="Toggle theme" title="Toggle theme">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+
+        <button id="save-button" class="heart-button" type="button" aria-label="Save" title="Save" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </button>
+      </div>
     </section>
   </main>
 
